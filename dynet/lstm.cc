@@ -1,12 +1,11 @@
 #include "dynet/lstm.h"
+
 #include "dynet/param-init.h"
 
 #include <fstream>
 #include <string>
 #include <vector>
 #include <iostream>
-
-#include "dynet/nodes.h"
 
 using namespace std;
 
@@ -671,18 +670,38 @@ Expression CompactVanillaLSTMBuilder::add_input_impl(int prev, const Expression&
         i_h_tm1 = h0[i];
         i_c_tm1 = c0[i];
       } else {
+<<<<<<< HEAD
 	       i_h_tm1 = zeroes(*_cg, Dim({vars[_BI].dim()[0]/4}, x.dim().bd));
 	       i_c_tm1 = i_h_tm1;
+=======
+	i_h_tm1 = zeros(*_cg, Dim({vars[_BI].dim()[0]/4}, x.dim().bd));
+	i_c_tm1 = i_h_tm1;
+>>>>>>> clab/master
       }
     } else {  // t > 0
       i_h_tm1 = h[prev][i];
       i_c_tm1 = c[prev][i];
     }
+<<<<<<< HEAD
     if (dropout_rate > 0.f) in = cmult(in, masks[i][0]);
     if (has_prev_state && dropout_rate_h > 0.f) i_h_tm1 = cmult(i_h_tm1, masks[i][1]);
     Expression gates_t = vanilla_lstm_gates(in, i_h_tm1, vars[_X2I], vars[_H2I], vars[_BI], weightnoise_std);
     ct[i] = vanilla_lstm_c(i_c_tm1, gates_t);
     in = ht[i] = vanilla_lstm_h(ct[i], gates_t);
+=======
+    // TODO: could extend lstm nodes to takes several inputs that will be concatenated internally, would save memory by avoiding concatenate() operation for bidirectional LSTMs
+    // TODO: smaller speed / memory gains by making a version of the lstm gates that assume c or h inputs to be zero (for beginning of sequence)
+    if (dropout_rate_h > 0.f){
+      // apply dropout according to https://arxiv.org/abs/1512.05287 (tied weights)
+      Expression gates_t = vanilla_lstm_gates_dropout({in}, i_h_tm1, vars[_X2I], vars[_H2I], vars[_BI], masks[i][0], masks[i][1], weightnoise_std);
+      ct[i] = vanilla_lstm_c(i_c_tm1, gates_t);
+      in = ht[i] = vanilla_lstm_h(ct[i], gates_t);
+    } else {
+      Expression gates_t = vanilla_lstm_gates({in}, i_h_tm1, vars[_X2I], vars[_H2I], vars[_BI], weightnoise_std);
+      ct[i] = vanilla_lstm_c(i_c_tm1, gates_t);
+      in = ht[i] = vanilla_lstm_h(ct[i], gates_t);
+    }
+>>>>>>> clab/master
   }
   return ht.back();
 }

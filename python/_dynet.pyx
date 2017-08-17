@@ -2094,28 +2094,65 @@ def pick_batch(Expression e, vector[unsigned] indices, unsigned dim=0):
 
 # }}}
 
-cpdef Expression zeroes(dim, int batch_size=1): 
+cpdef Expression zeros(dim, int batch_size=1): 
     """Create an input full of zeros
     
     Create an input full of zeros, sized according to dimensions :code:`dim`
     
     Args:
-        dim (tuple): Dimension of the tensor
+        dim (tuple, int): Dimension of the tensor
     
     Keyword Arguments:
         batch_size (number): Batch size of the tensor (default: (1))
     
     Returns:
-        dynet.Expression: A "d" dimensioned zero tensor
+        dynet.Expression: A :code:`d` dimensioned zero tensor
     """
-    return Expression.from_cexpr(_cg.version(), c_zeroes(_cg.thisptr[0], CDim(dim, batch_size)))
+    return Expression.from_cexpr(_cg.version(), c_zeros(_cg.thisptr[0], Dim(dim, batch_size)))
+# Backward compatibility
+cpdef Expression zeroes(dim, int batch_size=1):
+    return zeros(dim, batch_size)
+
+cpdef Expression ones(dim, int batch_size=1): 
+    """Create an input full of ones
+    
+    Create an input full of ones, sized according to dimensions :code:`dim`
+    
+    Args:
+        dim (tuple, int): Dimension of the tensor
+    
+    Keyword Arguments:
+        batch_size (number): Batch size of the tensor (default: (1))
+    
+    Returns:
+        dynet.Expression: A :code:`d` dimensioned zero tensor
+    """
+    return Expression.from_cexpr(_cg.version(), c_ones(_cg.thisptr[0], Dim(dim, batch_size)))
+
+cpdef Expression constant(dim, float val, int batch_size=1): 
+    """Create an input full of :code:`val`
+    
+    Create an input full of :code:`val`, sized according to dimensions :code:`dim`
+    
+    Args:
+        dim (tuple, int): Dimension of the tensor
+        val (number): Value
+    
+    Keyword Arguments:
+        batch_size (number): Batch size of the tensor (default: (1))
+    
+    Returns:
+        dynet.Expression: A :code:`d` dimensioned tensor filled with value :code:`val`
+    """
+    return Expression.from_cexpr(_cg.version(), c_constant(_cg.thisptr[0], Dim(dim, batch_size), val))
+
 cpdef Expression random_normal(dim, int batch_size=1): 
     """Create a random normal vector
     
     Create a vector distributed according to normal distribution with mean 0, variance 1.
     
     Args:
-        dim (tuple): Dimension of the tensor
+        dim (tuple, int): Dimension of the tensor
     
     Keyword Arguments:
         batch_size (number): Batch size of the tensor  (default: (1))
@@ -2123,14 +2160,14 @@ cpdef Expression random_normal(dim, int batch_size=1):
     Returns:
         dynet.Expression: A "d" dimensioned normally distributed tensor
     """
-    return Expression.from_cexpr(_cg.version(), c_random_normal(_cg.thisptr[0], CDim(dim, batch_size)))
+    return Expression.from_cexpr(_cg.version(), c_random_normal(_cg.thisptr[0], Dim(dim, batch_size)))
 cpdef Expression random_bernoulli(dim, float p, float scale=1.0, int batch_size=1):
     """Create a random bernoulli tensor
     
     Create a tensor distributed according to bernoulli distribution with parameter :math:`p`.
     
     Args:
-        dim (tuple): Dimension of the tensor
+        dim (tuple, int): Dimension of the tensor
         p (number): Parameter of the bernoulli distribution
     
     Keyword Arguments:
@@ -2140,14 +2177,14 @@ cpdef Expression random_bernoulli(dim, float p, float scale=1.0, int batch_size=
     Returns:
         dynet.Expression: A "d" dimensioned bernoulli distributed tensor
     """
-    return Expression.from_cexpr(_cg.version(), c_random_bernoulli(_cg.thisptr[0], CDim(dim, batch_size), p, scale))
+    return Expression.from_cexpr(_cg.version(), c_random_bernoulli(_cg.thisptr[0], Dim(dim, batch_size), p, scale))
 cpdef Expression random_uniform(dim, float left, float right, int batch_size=1):
     """Create a random uniform tensor
     
     Create a tensor distributed according to uniform distribution with boundaries left and right.
 
     Args:
-        dim (tuple): Dimension of the tensor
+        dim (tuple, int): Dimension of the tensor
         left (number): Lower bound of the uniform distribution
         right (number): Upper bound of the uniform distribution
     
@@ -2157,14 +2194,14 @@ cpdef Expression random_uniform(dim, float left, float right, int batch_size=1):
     Returns:
         dynet.Expression: A "d" dimensioned uniform distributed tensor
     """
-    return Expression.from_cexpr(_cg.version(), c_random_uniform(_cg.thisptr[0], CDim(dim, batch_size), left, right))
+    return Expression.from_cexpr(_cg.version(), c_random_uniform(_cg.thisptr[0], Dim(dim, batch_size), left, right))
 cpdef Expression random_gumbel(dim, float mu = 0.0, float beta = 1.0, int batch_size=1):
     """Create a random Gumbel sampled vector
     
     Create a vector distributed according to a Gumbel distribution with the specified parameters. (Currently only the defaults of mu=0.0 and beta=1.0 supported.
     
     Args:
-        dim (tuple): Dimension of the tensor
+        dim (tuple, int): Dimension of the tensor
     
     Keyword Arguments:
         mu (number): The :math:`\mu` parameter (default: (0.0))
@@ -2174,7 +2211,7 @@ cpdef Expression random_gumbel(dim, float mu = 0.0, float beta = 1.0, int batch_
     Returns:
         dynet.Expression:  "d" dimensioned Gumbel distributed tensor
     """
-    return Expression.from_cexpr(_cg.version(), c_random_gumbel(_cg.thisptr[0], CDim(dim, batch_size), mu, beta))
+    return Expression.from_cexpr(_cg.version(), c_random_gumbel(_cg.thisptr[0], Dim(dim, batch_size), mu, beta))
 
 cpdef Expression nobackprop(Expression x):
     """Prevent backprop
@@ -3725,13 +3762,15 @@ cpdef Expression weight_norm(Expression w, Expression g):
     ensure_freshness(g)
     return Expression.from_cexpr(w.cg_version, c_weight_norm(w.c(),g.c()))
 
-cpdef Expression vanilla_lstm_gates(Expression x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, weightnoise_std=0.0):
+# undocumented features, mainly meant to be used by CompactVanillaLSTMBuilder
+
+cpdef Expression vanilla_lstm_gates_dropout_concat(list x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, Expression dropout_mask_x, Expression dropout_mask_h, float weightnoise_std=0.0):
     """Computes LSTM gates (matrix multiply + nonlinearities):
     
-       gates_i = sigmoid (Wx_i * x_t + Wh_i * h_tm1 + b_i)
-       gates_f = sigmoid (Wx_f * x_t + Wh_f * h_tm1 + b_f + 1)
-       gates_o = sigmoid (Wx_o * x_t + Wh_o * h_tm1 + b_o)
-       gates_g =   tanh  (Wx_g * x_t + Wh_g * h_tm1 + b_g)
+       gates_i = sigmoid ((Wx_i * x_t) . dropout_mask_x + (Wh_i * h_tm1) . dropout_mask_h + b_i)
+       gates_f = sigmoid ((Wx_f * x_t) . dropout_mask_x + (Wh_f * h_tm1) . dropout_mask_h + b_f + 1)
+       gates_o = sigmoid ((Wx_o * x_t) . dropout_mask_x + (Wh_o * h_tm1) . dropout_mask_h + b_o)
+       gates_g =   tanh  ((Wx_g * x_t) . dropout_mask_x + (Wh_g * h_tm1) . dropout_mask_h + b_g)
        
        Where optionally gaussian noise with the given standard deviation is applied to Wx, Wh, b parameters. 
        
@@ -3741,7 +3780,7 @@ cpdef Expression vanilla_lstm_gates(Expression x_t, Expression h_tm1, Expression
                [gates_g]
 
     Args:
-        x_t (dynet.Expression): Input at current timestep (vector size I)
+        x_t (list of dynet.Expression): x_t Inputs at current timestep (if more than 1 input will be concatenated; summed vector size I)
         h_tm1 (dynet.Expression): State previous timestep (vector size H)
         Wx (dynet.Expression): Parameter matrix size 4H x I
         Wh (dynet.Expression): Parameter matrix size 4H x H
@@ -3752,9 +3791,33 @@ cpdef Expression vanilla_lstm_gates(Expression x_t, Expression h_tm1, Expression
         Vector size 4H
         dynet.Expression
     """
-    ensure_freshness(x_t)
     ensure_freshness(h_tm1)
-    return Expression.from_cexpr(x_t.cg_version, c_vanilla_lstm_gates(x_t.c(),h_tm1.c(),Wx.c(),Wh.c(),b.c(), weightnoise_std))
+    cdef Expression e
+    cdef vector[CExpression] ves
+    for e in x_t:
+        ensure_freshness(e) 
+        ves.push_back(e.c())
+    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates_concat(ves,h_tm1.c(),Wx.c(),Wh.c(),b.c(), weightnoise_std))
+
+cpdef Expression vanilla_lstm_gates_concat(list x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, float weightnoise_std=0.0):
+    ensure_freshness(h_tm1)
+    cdef Expression e
+    cdef vector[CExpression] ves
+    for e in x_t:
+        ensure_freshness(e) 
+        ves.push_back(e.c())
+    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates_concat(ves,h_tm1.c(),Wx.c(),Wh.c(),b.c(), weightnoise_std))
+
+cpdef Expression vanilla_lstm_gates_dropout(Expression x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, Expression dropout_mask_x, Expression dropout_mask_h, float weightnoise_std=0.0):
+    ensure_freshness(h_tm1)
+    ensure_freshness(x_t)
+    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates(x_t.c(),h_tm1.c(),Wx.c(),Wh.c(),b.c(), weightnoise_std))
+
+cpdef Expression vanilla_lstm_gates(Expression x_t, Expression h_tm1, Expression Wx, Expression Wh, Expression b, float weightnoise_std=0.0):
+    ensure_freshness(h_tm1)
+    ensure_freshness(x_t)
+    return Expression.from_cexpr(h_tm1.cg_version, c_vanilla_lstm_gates(x_t.c(),h_tm1.c(),Wx.c(),Wh.c(),b.c(), weightnoise_std))
+
 
 cpdef Expression vanilla_lstm_c(Expression c_tm1, Expression gates_t):
     """Computes LSTM cell: c_t = gates_i . gates_g + gates_f . c_tm1
@@ -4899,16 +4962,33 @@ cdef class Trainer:
         cdef vector[unsigned] ulookupvec
         for i in updated_lookups: ulookupvec.push_back(i)
         # self.thisptr.update(uparamvec, ulookupvec)
+
     cpdef update_epoch(self, r):
         """DEPRECATED: do not use.
         """
         self.thisptr.update_epoch(r)
+
+
+    cpdef restart(self, learning_rate=None):
+        """Restarts the optimizer
+        
+        Clears all momentum values and assimilate (if applicable)
+
+        Args:
+            learning_rate (number): (Optional) resets the learning rate
+        """
+        if learning_rate is None:
+            self.thisptr.restart()
+        else:
+            self.thisptr.restart(learning_rate)
+
     cpdef status(self):
         """Outputs information about the trainer in the stderr 
         
         (number of updates since last call, number of clipped gradients, learning rate, etc...)
         """
         self.thisptr.status()
+
     cpdef set_sparse_updates(self,bool su):
         """Sets updates to sparse updates
 

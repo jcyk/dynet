@@ -110,13 +110,13 @@ cdef extern from "dynet/model.h" namespace "dynet":
 cdef extern from "dynet/io.h" namespace "dynet":
     cdef cppclass CTextFileSaver "dynet::TextFileSaver":
         CTextFileSaver(string filename, bool append)
-        void save(CModel model, string & key)
-        void save(CParameters param, string & key)
-        void save(CLookupParameters param, string & key)
+        void save(CModel model, string & key) except +
+        void save(CParameters param, string & key) except +
+        void save(CLookupParameters param, string & key) except +
 
     cdef cppclass CTextFileLoader "dynet::TextFileLoader":
         CTextFileLoader(string filename)
-        void populate(CModel & model, string key)
+        void populate(CModel & model, string key) except +
         void populate(CParameters & param, string key) except +
         void populate(CLookupParameters & param, string key) except +
         CParameters load_param(CModel & model, string key) except +
@@ -194,6 +194,8 @@ cdef extern from "dynet/training.h" namespace "dynet":
         bool sparse_updates_enabled
         float learning_rate
         void update() except +
+        void restart() except +
+        void restart(float learning_rate) except +
         #void update(vector[unsigned]& uparam, vector[unsigned]& ulookup, float s) except +
         void update_epoch(float r)
         void status()
@@ -244,7 +246,9 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     #CExpression c_const_lookup "dynet::const_lookup" (CComputationGraph& g, CLookupParameters* p, unsigned index) except +   #
     CExpression c_const_lookup "dynet::const_lookup" (CComputationGraph& g, CLookupParameters p, unsigned* pindex) except + #
     CExpression c_const_lookup "dynet::const_lookup" (CComputationGraph& g, CLookupParameters p, vector[unsigned]* pindices) except + #
-    CExpression c_zeroes "dynet::zeroes" (CComputationGraph& g, CDim& d) except + #
+    CExpression c_zeros "dynet::zeros" (CComputationGraph& g, CDim& d) except + #
+    CExpression c_ones "dynet::ones" (CComputationGraph& g, CDim& d) except + #
+    CExpression c_constant "dynet::constant" (CComputationGraph& g, CDim& d, float val) except + #
     CExpression c_random_normal "dynet::random_normal" (CComputationGraph& g, CDim& d) except + #
     CExpression c_random_bernoulli "dynet::random_bernoulli" (CComputationGraph& g, CDim& d, float p, float scale) except +
     CExpression c_random_uniform "dynet::random_uniform" (CComputationGraph& g, CDim& d, float left, float right) except + #
@@ -378,6 +382,9 @@ cdef extern from "dynet/expr.h" namespace "dynet":
     CExpression c_weight_norm "dynet::weight_norm" (CExpression& w, CExpression& g) except + #
 
     CExpression c_vanilla_lstm_gates "dynet::vanilla_lstm_gates" (CExpression& x_t, CExpression& h_tm1, CExpression& Wx, CExpression& Wh, CExpression& b, float weightnoise_std) except + #
+    CExpression c_vanilla_lstm_gates_concat "dynet::vanilla_lstm_gates_concat" (const vector[CExpression]& x_t, CExpression& h_tm1, CExpression& Wx, CExpression& Wh, CExpression& b, float weightnoise_std) except + #
+    CExpression c_vanilla_lstm_gates_dropout "dynet::vanilla_lstm_gates_dropout" (CExpression& x_t, CExpression& h_tm1, CExpression& Wx, CExpression& Wh, CExpression& b, CExpression& dropout_mask_x, CExpression& dropout_mask_h, float weightnoise_std) except + #
+    CExpression c_vanilla_lstm_gates_dropout_concat "dynet::vanilla_lstm_gates_dropout_concat" (const vector[CExpression]& x_t, CExpression& h_tm1, CExpression& Wx, CExpression& Wh, CExpression& b, CExpression& dropout_mask_x, CExpression& dropout_mask_h, float weightnoise_std) except + #
     CExpression c_vanilla_lstm_c "dynet::vanilla_lstm_c" (CExpression& c_tm1, CExpression& gates_t) except + #
     CExpression c_vanilla_lstm_h "dynet::vanilla_lstm_h" (CExpression& c_t, CExpression& gates_t) except + #
 
